@@ -19,7 +19,7 @@
         <lable>
             @InputValue
         </lable>
-        <SfAutoComplete TValue="string" TItem="string" @oninput="@((ChangeEventArgs __e) => @GetAutoComlleteListAsync(__e))" 
+        <SfAutoComplete TValue="string" TItem="string" @oninput="@((ChangeEventArgs __e) => @GetAutoComlleteListAsync(__e))"
             @bind-Value="data.ticker" Placeholder="e.g. TSLA" DataSource="@resultList">
             <AutoCompleteFieldSettings Value="ticker"></AutoCompleteFieldSettings>
         </SfAutoComplete>
@@ -45,19 +45,20 @@
     }
 </style>
 
-@*<SfAutoComplete TValue="string" TItem="EmployeeData" Placeholder="Select a Employee" Query="@Query">
+@*<SfAutoComplete TValue="string" TItem="EmployeeData" Placeholder="Select a Employee" Query="@RemoteDataQuery">
     <SfDataManager Url="https://ej2services.syncfusion.com/production/web-services/api/Employees" Offline=true Adaptor="Adaptors.WebApiAdaptor" CrossDomain=true></SfDataManager>
     <AutoCompleteFieldSettings Value="FirstName"></AutoCompleteFieldSettings>
 </SfAutoComplete>*@
-@*<SfAutoComplete TValue="string" TItem="Result" Placeholder="e.g. TSLA" Query="@RemoteDataQuery" Autofill="true">
+@*<SfAutoComplete TValue="string" TItem="Data" Placeholder="e.g. TSLA" Query="@RemoteDataQuery" Autofill="true">
     <SfDataManager Url="@Url" CrossDomain="true" Adaptor="Adaptors.WebApiAdaptor"></SfDataManager>
     <AutoCompleteFieldSettings Value="ticker" />
 </SfAutoComplete>*@
 
 @code {
     //public Query RemoteDataQuery = new Query().Select(new List<string> { "ticker" }).Take(6).RequiresCount();
+    //public tickers = res.results.Select(x => x.ticker).toList();
     //public Query Query = new Query().Select(new List<string> { "FirstName" }).Take(6).RequiresCount();
-    //public string Url = 
+    //public string Url = $"https://api.polygon.io/v3/reference/tickers?search={InputValue}&active=true&sort=ticker&order=asc&limit=100";
     private string? InputValue { get; set; }
     public class Data
     {

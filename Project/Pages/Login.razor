@@ -2,54 +2,152 @@
 @using Microsoft.Extensions.Logging
 @using Project.DTOs.UserAuth
 @using Project.Exceptions
+@using Project.Services
 @using Project.Services.UserAuth
+@using System.ComponentModel.DataAnnotations
+@using System.Net.Http.Json
+@using Newtonsoft.Json
 
 @inject ILogger<Login> Logger
 @inject IAuthenticationServices _authServices
 @inject NavigationManager NavigationManager
+@inject IConfiguration _configuration
+@inject IStocksServices _stockServices;
+@inject HttpClient Http
 
-<h2 style="position:absolute; top:35%; left:50%">Login</h2>
+    <EditForm Model="@userLogin" style="align-content:space-around; position:absolute; top:40%; left:50%" OnValidSubmit="@HandleValidLogin">
+        <DataAnnotationsValidator />
+        <div>
+            <h1>Login</h1>
+            <div class="form-group">
+                <lable for="Login">Login</lable>
+                <InputText id="login" placeholder="Login" @bind-Value="userLogin.Login" class="border" />
+            </div>
+            <div class="form-group">
+                <lable for="Password">Password</lable>
+                <InputText id="password" type="password" placeholder="Password" @bind-Value="userLogin.Password" class="border" />
+            </div>
+            <div class="text-right">
+                <button class="rounded-2"
+                    style="width:100px; height:35px;-webkit-text-fill-color:white; border-color:rebeccapurple; background-color:rebeccapurple"
+                    type="submit">
 
-<EditForm Model="@user" style="align-content:space-around; position:absolute; top:40%; left:50%" OnValidSubmit="@HandleValidSubmit">
-    <DataAnnotationsValidator />
+                    Log In
 
-    <div class="form-group">
-        <lable for="Login">Login</lable>
-        <InputText id="login" placeholder="Login" @bind-Value="user.Login" class="border" />
-    </div>
-    <div class="form-group">
-        <lable for="Password">Password</lable>
-        <InputText id="password" type="password" placeholder="Password" @bind-Value="user.Password" class="border" />
-    </div>
-    <div class="text-right">
-        <button class="rounded-2" 
-        style="width:100px; height:35px;-webkit-text-fill-color:white; border-color:rebeccapurple; background-color:rebeccapurple" 
-        type="submit">Log In</button>
-    </div>
-    <div class="row">
-        <div class="col-sm-12">
-            <button class="rounded-2" 
-            style="width:100px; height:35px; position:relative; top:35%; left:60%; -webkit-text-fill-color:white; border-color:rebeccapurple; background-color:rebeccapurple" 
-            @onclick="NavigateToRegisterPage">Register</button>
+                </button>
+            </div>
+            <div class="row">
+                <div class="col-sm-12">
+                    <button class="rounded-2"
+                        style="width:100px; height:35px; position:relative; top:35%; left:60%; -webkit-text-fill-color:white; border-color:rebeccapurple; background-color:rebeccapurple"
+                        @onclick="ToggleRegister">
+                        Register
+                    </button>
+                </div>
+            </div>
+        </div>
+    </EditForm>
+@if (@RegisterShown)
+{
+    <div class="modal" tabindex="-1" style="display:block" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Register</h3>
+                    <button type="button" class="close" onclick="@ToggleRegister">
+                        <span aria-hidden="true">X</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="@userRegister" OnValidSubmit="@HandleValidRegister">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+                        <div class="form-group">
+                            <lable for="Login">Login</lable>
+                            <InputText id="login" placeholder="Login" @bind-Value="userRegister.Login" class="border" />
+                            <ValidationMessage For="() => userRegister.Login" />
+                        </div>
+                        <div class="form-group">
+                            <lable for="Password">Password</lable>
+                            <InputText id="password" type="password" placeholder="Password" @bind-Value="userRegister.Password" />
+                            <ValidationMessage For="() => userRegister.Password" />
+                        </div>
+                        <div class="form-group">
+                            <lable for="Confirm Password">Confirm Password:</lable>
+                            <InputText id="confirmPassword" type="password" placeholder="Confirm Password" @bind-Value="userRegister.ConfirmPassword" />
+                            <ValidationMessage For="() => userRegister.ConfirmPassword" />
+                        </div>
+
+                        <div class="text-right">
+                            <button class="rounded-2"
+                                style="width:100px; height:35px;-webkit-text-fill-color:white; border-color:rebeccapurple; background-color:rebeccapurple"
+                                type="submit">
+
+                                Submit
+
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
         </div>
     </div>
-</EditForm>
+}
+
 
 @code {
-    private UserDTO user = new UserDTO();
-    private AccountResponseDTO ac = new AccountResponseDTO();
+    // General
+    private bool LoginShown { get; set; } = true;
+    private bool RegisterShown { get; set; } = false;
+    private bool SearchShown { get; set; } = false;
+    private bool ChartShown { get; set; } = false;
 
-    private async void HandleValidSubmit()
+    private void ToggleRegister()
     {
+        RegisterShown = !RegisterShown;
+    }
+    private void ToggleLogin()
+    {
+        LoginShown = !LoginShown;
+    }
+    private void ToggleSearch()
+    {
+        SearchShown = !SearchShown;
+    }
+    private void ToggleChart()
+    {
+        ChartShown = !ChartShown;
+    }
+    // Login/Register
+    private UserDTO userLogin = new UserDTO();
+    private UserRegister userRegister = new UserRegister();
+    private AccountResponseDTO ac = new AccountResponseDTO();
+    private class UserRegister
+    {
+        [Required]
+        [StringLength(15, ErrorMessage = "Login is too long. 15 characters max")]
+        [MinLength(3, ErrorMessage = "Login is too short. 3 characters min")]
+        [RegularExpression(@"^[a-zA-Z0-9_-]$", ErrorMessage = "Login can only contain lower or uppercase letters, numbers and/or _ -")]
+        public string Login { get; set; }
+        [Required]
+        //[RegularExpression(@"^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9]).{8,}$", ErrorMessage = "Minimum eight characters, at least one upper case English letter, one lower case English letter, one number and one special character")]
+        public string Password { get; set; }
+        [Required]
+        //[RegularExpression(@"^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9]).{8,}$", ErrorMessage = "Minimum eight characters, at least one upper case English letter, one lower case English letter, one number and one special character")]
+        [Compare(nameof(Password), ErrorMessage = "Passwords do not match")]
+        public string ConfirmPassword { get; set; }
+    }
 
-        Logger.LogInformation("HandleValidSubmit called");
-        Logger.LogInformation($"Login: {user.Login} \tPassword: {user.Password}");
+    private async void HandleValidLogin()
+    {
+        Logger.LogInformation("HandleValidLogin called");
+        Logger.LogInformation($"Login: {userLogin.Login} \tPassword: {userLogin.Password}");
 
         try
         {
-            ac = await _authServices.LoginAsync(user);
+            ac = await _authServices.LoginAsync(userLogin);
             Logger.LogInformation($"Access Token: {ac.AccessToken}");
-            NavigateToSearchPage();
+
         }
         catch (UnauthorizedException e)
         {
@@ -58,16 +156,79 @@
         catch (NotFoundException e)
         {
             Console.WriteLine(e.Message);
-        }
 
-        // Process the valid form
+        }
+        ToggleLogin();
+        ToggleSearch();
     }
-    private void NavigateToRegisterPage()
+    private async void HandleValidRegister()
     {
-        NavigationManager.NavigateTo("http://localhost:5158/register", true);
+        Logger.LogInformation("HandleValidRegister called");
+        Logger.LogInformation("Login: " + userRegister.Login + "\tPassword: " + userRegister.Password);
+        await _authServices.RegisterAsync(new UserDTO
+        {
+            Login = userRegister.Login,
+            Password = userRegister.Password
+        });
+        ToggleRegister();
     }
-    private void NavigateToSearchPage()
+    // Search
+    private string? InputValue { get; set; }
+    public Data data = new Data();
+    public List<string> resultList = new List<string>();
+    public List<string> tickerList = new List<string>();
+    public class Data
     {
-        NavigationManager.NavigateTo("http://localhost:5158/search", true);
+        [Required(ErrorMessage = "The Ticker Name field is required.")]
+        public string ticker;
+    }
+
+    public async Task GetAutoComlleteListAsync(ChangeEventArgs __e)
+    {
+        InputValue = __e?.Value?.ToString();
+        string url = $"https://api.polygon.io/v3/reference/tickers?search={InputValue}&active=true&sort=ticker&order=asc&limit=100";
+        Console.WriteLine(url);
+        if (InputValue == null)
+        {
+            url = $"https://api.polygon.io/v3/reference/tickers?&active=true&sort=ticker&order=asc&limit=100";
+        }
+        resultList = await _stockServices.GetCompaniesAsync(url);
+        tickerList.AddRange(resultList.Except(tickerList));
+        return;
+    }
+    private void OnValidSearchSubmit()
+    {
+        //ToggleSearch();
+        ToggleChart();
+        Console.WriteLine("Valid");
+    }
+    // Chart
+    private List<StockChartData> DataSource;
+    public class StockChartData
+    {
+        public DateTime Date { get; set; }
+        public Double Open { get; set; }
+        public Double Low { get; set; }
+        public Double Close { get; set; }
+        public Double High { get; set; }
+        public Double Volume { get; set; }
+        public override string ToString()
+        {
+            return JsonConvert.SerializeObject(this); 
+        }
+    }
+
+    private async Task CharInitialize()
+    {
+        DataSource = await Http.GetFromJsonAsync<List<StockChartData>>("http://localhost:5158/api/stocks/timeSpan?symbol=TSLA");
+        Console.WriteLine("Start:");
+        foreach (var item in DataSource)
+        {
+            Console.WriteLine(item);
+        }
+        if(DataSource == null)
+        {
+            Console.WriteLine("null");  
+        }
     }
 }
