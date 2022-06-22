@@ -1,0 +1,73 @@
+﻿@page "/login"
+@using Microsoft.Extensions.Logging
+@using Project.DTOs.UserAuth
+@using Project.Exceptions
+@using Project.Services.UserAuth
+
+@inject ILogger<Login> Logger
+@inject IAuthenticationServices _authServices
+@inject NavigationManager NavigationManager
+
+<h2 style="position:absolute; top:35%; left:50%">Login</h2>
+
+<EditForm Model="@user" style="align-content:space-around; position:absolute; top:40%; left:50%" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+
+    <div class="form-group">
+        <lable for="Login">Login</lable>
+        <InputText id="login" placeholder="Login" @bind-Value="user.Login" class="border" />
+    </div>
+    <div class="form-group">
+        <lable for="Password">Password</lable>
+        <InputText id="password" type="password" placeholder="Password" @bind-Value="user.Password" class="border" />
+    </div>
+    <div class="text-right">
+        <button class="rounded-2" 
+        style="width:100px; height:35px;-webkit-text-fill-color:white; border-color:rebeccapurple; background-color:rebeccapurple" 
+        type="submit">Log In</button>
+    </div>
+    <div class="row">
+        <div class="col-sm-12">
+            <button class="rounded-2" 
+            style="width:100px; height:35px; position:relative; top:35%; left:60%; -webkit-text-fill-color:white; border-color:rebeccapurple; background-color:rebeccapurple" 
+            @onclick="NavigateToRegisterPage">Register</button>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    private UserDTO user = new UserDTO();
+    private AccountResponseDTO ac = new AccountResponseDTO();
+
+    private async void HandleValidSubmit()
+    {
+
+        Logger.LogInformation("HandleValidSubmit called");
+        Logger.LogInformation($"Login: {user.Login} \tPassword: {user.Password}");
+
+        try
+        {
+            ac = await _authServices.LoginAsync(user);
+            Logger.LogInformation($"Access Token: {ac.AccessToken}");
+            NavigateToSearchPage();
+        }
+        catch (UnauthorizedException e)
+        {
+            Console.WriteLine(e.Message);
+        }
+        catch (NotFoundException e)
+        {
+            Console.WriteLine(e.Message);
+        }
+
+        // Process the valid form
+    }
+    private void NavigateToRegisterPage()
+    {
+        NavigationManager.NavigateTo("http://localhost:5158/register", true);
+    }
+    private void NavigateToSearchPage()
+    {
+        NavigationManager.NavigateTo("http://localhost:5158/search", true);
+    }
+}

@@ -1,0 +1,55 @@
+﻿@page "/register"
+@using Microsoft.Extensions.Logging
+@using Project.DTOs.UserAuth
+@using Project.Services.UserAuth
+@using System.ComponentModel.DataAnnotations
+
+@inject ILogger<Login> Logger
+@inject IAuthenticationServices _authServices
+@inject NavigationManager NavigationManager
+<h3>Register</h3>
+
+<EditForm Model="@user" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <p>
+        <lable for="Login">Login</lable>
+        <InputText id="login" placeholder="Login" @bind-Value="user.Login" />
+        <ValidationMessage For="() => user.Login" />
+    </p>
+    <p>
+        <lable for="Password">Password</lable>
+        <InputText id="password" type="password" placeholder="Password" @bind-Value="user.Password" />
+        <ValidationMessage For="() => user.Password" />
+    </p>
+    <p>
+        <lable for="Confirm Password">Confirm Password:</lable>
+        <InputText id="confirmPassword" type="password" placeholder="Confirm Password" @bind-Value="confirmPassword"/>
+        <ValidationMessage For="() => confirmPassword" />
+    </p>
+
+    <button type="submit">Submit</button>
+</EditForm>
+
+@code {
+    private UserDTO user = new UserDTO();
+
+    [RegularExpression(@"^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$ %^&*-]).{8,}$", ErrorMessage = "Minimum eight characters, at least one upper case English letter, one lower case English letter, one number and one special character")]
+    private string confirmPassword;
+
+    private async void HandleValidSubmit()
+    {
+        Logger.LogInformation("HandleValidSubmit called");
+        Logger.LogInformation("Login: " + user.Login + "\tPassword: " + user.Password);
+        if(user.Password == confirmPassword)
+        {
+            await _authServices.RegisterAsync(user);
+            NavigationManager.NavigateTo("http://localhost:5158/login", true);
+        }
+        else
+        {
+            throw new BadHttpRequestException("Passwords does not match");
+        }
+    }
+}

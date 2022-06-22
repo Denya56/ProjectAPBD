@@ -1,0 +1,91 @@
+﻿@page "/search"
+@using Project.DTOs
+@using Project.Services
+@using System.ComponentModel.DataAnnotations
+
+@inject IConfiguration _configuration
+@inject IStocksServices _stockServices;
+<h3>Search</h3>
+
+<EditForm Model="@data" OnValidSubmit="@OnValidSubmit">
+    <DataAnnotationsValidator />
+    <div>
+        <label class="example-label">Select a company (Ticker symbol) </label>
+        @*<label>
+        Demonstration of equivalent HTML binding: 
+        <input value="@InputValue"
+            @onchange="@((ChangeEventArgs __e) => InputValue = __e?.Value?.ToString())" />
+        </label>*@
+        <lable>
+            @InputValue
+        </lable>
+        <SfAutoComplete TValue="string" TItem="string" @oninput="@((ChangeEventArgs __e) => @GetAutoComlleteListAsync(__e))" 
+            @bind-Value="data.ticker" Placeholder="e.g. TSLA" DataSource="@resultList">
+            <AutoCompleteFieldSettings Value="ticker"></AutoCompleteFieldSettings>
+        </SfAutoComplete>
+        <ValidationMessage For="()=>data.ticker"/>
+    </div>
+    <div class="submit-btn">
+        <SfButton type="submit" IsPrimary="true">Submit</SfButton>
+    </div>
+</EditForm>
+<style>
+    .example-label {
+        font-size: 14px;
+        margin-bottom: 6px;
+    }
+    .submit-btn {
+        display: flex;
+        justify-content: center;
+        padding: 20px 0px 0px;
+    }
+    .validation-message {
+        color: red;
+        padding: 5px 0px 0px;
+    }
+</style>
+
+@*<SfAutoComplete TValue="string" TItem="EmployeeData" Placeholder="Select a Employee" Query="@Query">
+    <SfDataManager Url="https://ej2services.syncfusion.com/production/web-services/api/Employees" Offline=true Adaptor="Adaptors.WebApiAdaptor" CrossDomain=true></SfDataManager>
+    <AutoCompleteFieldSettings Value="FirstName"></AutoCompleteFieldSettings>
+</SfAutoComplete>*@
+@*<SfAutoComplete TValue="string" TItem="Result" Placeholder="e.g. TSLA" Query="@RemoteDataQuery" Autofill="true">
+    <SfDataManager Url="@Url" CrossDomain="true" Adaptor="Adaptors.WebApiAdaptor"></SfDataManager>
+    <AutoCompleteFieldSettings Value="ticker" />
+</SfAutoComplete>*@
+
+@code {
+    //public Query RemoteDataQuery = new Query().Select(new List<string> { "ticker" }).Take(6).RequiresCount();
+    //public Query Query = new Query().Select(new List<string> { "FirstName" }).Take(6).RequiresCount();
+    //public string Url = 
+    private string? InputValue { get; set; }
+    public class Data
+    {
+        [Required(ErrorMessage = "The Ticker Name field is required.")]
+        public string ticker;        
+    }
+
+    public Data data = new Data();
+    public List<string> resultList = new List<string>();
+    public List<string> tickerList = new List<string>();
+
+    public async Task GetAutoComlleteListAsync(ChangeEventArgs __e)
+    {
+        InputValue = __e?.Value?.ToString();
+        string url = $"https://api.polygon.io/v3/reference/tickers?search={InputValue}&active=true&sort=ticker&order=asc&limit=100";
+        Console.WriteLine(url);
+        if(InputValue == null)
+        {
+            url = $"https://api.polygon.io/v3/reference/tickers?&active=true&sort=ticker&order=asc&limit=100";    
+        }
+        resultList = await _stockServices.GetCompaniesAsync(url);
+        tickerList.AddRange(resultList.Except(tickerList));
+        return;
+    }
+
+    private void OnValidSubmit()
+    {
+        Console.WriteLine("Valid");
+    }
+
+}
