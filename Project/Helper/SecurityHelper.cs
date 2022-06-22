@@ -64,7 +64,7 @@ namespace Project.Helper
                 ValidIssuer = "",
                 ValidAudience = "",
                 ValidateLifetime = false,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret))
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes())
 
             };
             var tokenHandler = new JwtSecurityTokenHandler();

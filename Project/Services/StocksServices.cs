@@ -7,6 +7,7 @@ using Project.Models;
 using Syncfusion.Blazor.Data;
 using System.Net.Http;
 using System.Text.Json;
+using Project.Helper;
 
 namespace Project.Services
 {
@@ -47,23 +48,23 @@ namespace Project.Services
                 {
                     Logo = responceClass.results.branding.logo_url,
                     Cik = responceClass.results.cik,
-                    Bloomberg = null,
+                    Bloomberg = "",
                     Figi = responceClass.results.composite_figi,
-                    Lei = null,
+                    Lei = "",
                     Sic = responceClass.results.sic_code,
                     Country = responceClass.results.locale,
-                    Industry = null,
+                    Industry = "",
                     Sector = responceClass.results.sic_description,
                     MarketCap = responceClass.results.market_cap.ToString(),
                     EmployeesAmount = responceClass.results.total_employees.ToString(),
                     Phone = responceClass.results.phone_number,
-                    Ceo = null,
+                    Ceo = "",
                     Url = responceClass.results.homepage_url,
                     Description = responceClass.results.description,
                     Exchange = responceClass.results.primary_exchange,
                     Name = responceClass.results.name,
                     Symbol = responceClass.results.ticker,
-                    ExchangeSymbol = null,
+                    ExchangeSymbol = "",
                     HqAddress = $"{responceClass.results.address.address1} {responceClass.results.address.city} {responceClass.results.address.state}, {responceClass.results.address.postal_code}",
                     HqState = responceClass.results.address.state,
                     HqCountry = responceClass.results.locale,
@@ -95,7 +96,7 @@ namespace Project.Services
         }
         public async Task<List<PricesTimeSpan>> GetChartDataTimeSpanAsync(string symbol)
         {
-            string link = $"https://api.polygon.io/v2/aggs/ticker/{symbol}/range/1/day/2022-05-21/2022-06-21?adjusted=true&sort=asc&limit=120&apiKey=DVfT7O6xUbNbTdYdpsCApei4uYcJTS0U";
+            string link = $"https://api.polygon.io/v2/aggs/ticker/{symbol}/range/1/day/2021-06-22/2021-07-22?sort=asc&apiKey=DVfT7O6xUbNbTdYdpsCApei4uYcJTS0U";
             string responseBody = await _httpClient.GetStringAsync(
                 $"{link}");
             var responseClass = JsonSerializer.Deserialize<TimeSpanDTO>(responseBody);
@@ -117,6 +118,30 @@ namespace Project.Services
                 Console.WriteLine(item);
             }
             return pricesTimeSpan;
+        }
+        public async Task AddToWatchlist(string symbol, string userToken)
+        {
+            var company = await _context.Companies.FirstOrDefaultAsync(x => x.Symbol.Equals(symbol));
+            int IdUser = int.Parse(SecurityHelper.GetUserIdFromAccToken(userToken, _configuration["SecretKey"]));
+            await _context.Watchlists.AddAsync(new Watchlist
+            {
+                IdUser = IdUser,
+                IdCompany = company.IdCompany,
+                Logo = company.Logo,
+                Symbol = symbol,
+                Name = company.Name,
+                Sector = company.Sector,
+                Country = company.Country,
+                Ceo = company.Ceo
+            });
+            await _context.SaveChangesAsync();
+            return;
+        }
+        public async Task<List<Watchlist>> GetWatchlist(string userToken)
+        {
+            int IdUser = int.Parse(SecurityHelper.GetUserIdFromAccToken(userToken, _configuration["SecretKey"]));
+            var watchlist = await _context.Watchlists.Where(x => x.IdUser == IdUser).ToListAsync();
+            return watchlist;
         }
         /*private async Task<List<string>> GetCompaniesListAsync(string link)
         {

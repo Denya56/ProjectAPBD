@@ -1,13 +1,16 @@
 ﻿@page "/search"
+@using Newtonsoft.Json
 @using Project.DTOs
 @using Project.Services
 @using System.ComponentModel.DataAnnotations
+@using System.Net.Http.Json
 
+@inject HttpClient Http
 @inject IConfiguration _configuration
 @inject IStocksServices _stockServices;
 <h3>Search</h3>
 
-<EditForm Model="@data" OnValidSubmit="@OnValidSubmit">
+<EditForm Model="@data" OnValidSubmit="@OnValidSearchSubmit">
     <DataAnnotationsValidator />
     <div>
         <label class="example-label">Select a company (Ticker symbol) </label>
@@ -29,6 +32,30 @@
         <SfButton type="submit" IsPrimary="true">Submit</SfButton>
     </div>
 </EditForm>
+<div class="form-text">
+    <SfButton IsPrimary="true" @onclick="@AddToWatchlist">+</SfButton>
+</div>
+@if (@ChartShown)
+{
+
+    <div class="control-section">
+    <div>
+        <SfStockChart EnableSelector="false">
+            <StockChartPeriods>
+                <StockChartPeriod IntervalType=RangeIntervalType.Days Interval="1" Text='1 Day' Selected="true"></StockChartPeriod>
+                <StockChartPeriod IntervalType=RangeIntervalType.Weeks Interval="1" Text='1 Week'></StockChartPeriod>
+                <StockChartPeriod IntervalType=RangeIntervalType.Days Interval="1" Text='1 Month' ></StockChartPeriod>
+                <StockChartPeriod IntervalType=RangeIntervalType.Months Interval="3" Text='3 Months'></StockChartPeriod>
+            </StockChartPeriods>
+        <StockChartPrimaryXAxis>
+        </StockChartPrimaryXAxis>
+        <StockChartSeriesCollection>
+            <StockChartSeries DataSource="@DataSource" Type="ChartSeriesType.HiloOpenClose" XName="Date" High="High" Low="Low" Open="Open" Close="Close" Volume="Volume"></StockChartSeries>
+        </StockChartSeriesCollection>
+    </SfStockChart>
+    </div>
+</div>
+}
 <style>
     .example-label {
         font-size: 14px;
@@ -59,7 +86,9 @@
     //public tickers = res.results.Select(x => x.ticker).toList();
     //public Query Query = new Query().Select(new List<string> { "FirstName" }).Take(6).RequiresCount();
     //public string Url = $"https://api.polygon.io/v3/reference/tickers?search={InputValue}&active=true&sort=ticker&order=asc&limit=100";
+    private bool ChartShown { get; set; } = false;
     private string? InputValue { get; set; }
+    private string? SearchResult { get; set; }
     public class Data
     {
         [Required(ErrorMessage = "The Ticker Name field is required.")]
@@ -69,6 +98,10 @@
     public Data data = new Data();
     public List<string> resultList = new List<string>();
     public List<string> tickerList = new List<string>();
+    private void ToggleChart()
+    {
+        ChartShown = !ChartShown;
+    }
 
     public async Task GetAutoComlleteListAsync(ChangeEventArgs __e)
     {
@@ -84,9 +117,48 @@
         return;
     }
 
-    private void OnValidSubmit()
+    private void OnValidSearchSubmit()
     {
+        SearchResult = InputValue;
+        ToggleChart();
         Console.WriteLine("Valid");
     }
+    // Chart
+    private List<StockChartData> DataSource;
+    public class StockChartData
+    {
+        public DateTime Date { get; set; }
+        public Double Open { get; set; }
+        public Double Low { get; set; }
+        public Double Close { get; set; }
+        public Double High { get; set; }
+        public Double Volume { get; set; }
+        public override string ToString()
+        {
+            return JsonConvert.SerializeObject(this); 
+        }
+    }
 
+    private async Task CharInitialize()
+    {
+        DataSource = await Http.GetFromJsonAsync<List<StockChartData>>($"http://localhost:5158/api/stocks/timeSpan?symbol={SearchResult.ToUpper()}");
+        Console.WriteLine("Start:");
+        if (DataSource != null)
+        {
+            foreach (var item in DataSource)
+            {
+                Console.WriteLine(item);
+            }
+        }
+        else
+        {
+            Console.WriteLine("null");
+        }
+    }
+    private async void AddToWatchlist()
+    {
+        string userToken = "";
+        await _stockServices.AddToWatchlist(SearchResult, userToken);
+        Console.WriteLine("Added");
+    }
 }

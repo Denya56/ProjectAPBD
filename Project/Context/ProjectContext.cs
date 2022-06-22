@@ -21,24 +21,26 @@ namespace Project.Context
             base.OnConfiguring(optionsBuilder);
             optionsBuilder.UseSqlServer(_configuration.GetConnectionString("Project"));
         }
-        /*protected override void OnModelCreating(ModelBuilder modelBuilder)
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            modelBuilder.Entity<User>(u =>
-            {
-                u.HasData(new User
-                {
-                    IdUser = 1,
-                    Login = "admin",
-                    Password = "IAmTheWorldEnder",
-                });
-            });
-        }*/
+            modelBuilder.Entity<Watchlist>()
+                .HasKey(w => new { w.IdUser, w.IdCompany });
+            modelBuilder.Entity<Watchlist>()
+                .HasOne(w => w.User)
+                .WithMany(u => u.Watchlists)
+                .HasForeignKey(w => w.IdUser);
+            modelBuilder.Entity<Watchlist>()
+                .HasOne(w => w.Company)
+                .WithMany(c => c.Watchlists)
+                .HasForeignKey(w => w.IdCompany);
+        }
         public DbSet<Company> Companies { get; set; }
         /*public DbSet<PriceDaily> PricesDaily { get; set; }
         public DbSet<PricesTimeSpan> PricesTimeSpans { get; set; }
         public DbSet<Result> Results { get; set; }*/
         public DbSet<User> Users { get; set; }
         public DbSet<PricesTimeSpan> PricesTimeSpans { get; set; }
+        public DbSet<Watchlist> Watchlists { get; set; }
     }
 }

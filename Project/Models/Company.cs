@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Project.Models.UserAuth;
 using System.ComponentModel.DataAnnotations;
 
 namespace Project.Models
@@ -31,9 +32,8 @@ namespace Project.Models
         public string? HqCountry { get; set; }
         public string? Type { get; set; }
         public string? Updated { get; set; }
-        /*public List<string>? Tags { get; set; }
-        public List<string> Similar { get; set; }*/
         public bool Active { get; set; }
+        public ICollection<Watchlist> Watchlists { get; set; }
 
         public override string ToString()
         {

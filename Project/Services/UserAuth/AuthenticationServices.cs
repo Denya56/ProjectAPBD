@@ -16,7 +16,6 @@ namespace Project.Services.UserAuth
     {
         private readonly ProjectContext _context;
         private readonly IConfiguration _configuration;
-        private static int IdCounter = 1;
 
         public AuthenticationServices(ProjectContext context, IConfiguration configuration)
         {
