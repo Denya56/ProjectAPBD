@@ -11,6 +11,7 @@
     <GridColumns>
         <GridColumn Field=@nameof(Data.Symbol) HeaderText="Symbol" Width="90"></GridColumn>
         <GridColumn Field=@nameof(Data.Name) HeaderText="Name" Width="90"></GridColumn>
+        <GridColumn Field=@nameof(Data.Sector) HeaderText="Sector" Width="90"></GridColumn>
         <GridColumn Field=@nameof(Data.Country) HeaderText="Country" Width="90"></GridColumn>
     </GridColumns>
 </SfGrid>
@@ -25,47 +26,16 @@
 </SfGrid>*@
 
 @code {
-    public List<Order> Orders { get; set; } = new List<Order>();
-
-    protected override void OnInitialized()
-    {
-        Orders.Add(new Order
-            {
-                OrderID = 1,
-                CustomerID = "xD",
-                OrderDate = DateTime.Now,
-                Freight = 2.1
-            });
-        foreach (var item in Orders)
-        {
-            Console.WriteLine(item);
-        }
-    }
-
-    public class Order
-    {
-        public int? OrderID { get; set; }
-        public string CustomerID { get; set; }
-        public DateTime? OrderDate { get; set; }
-        public double? Freight { get; set; }
-        public override string ToString()
-        {
-            return JsonConvert.SerializeObject(this);
-        }
-    }
-
     public string LocalStorageQueryKey { get; set; } = "Access Token";
     public string LocalStorageQueryValue { get; set; }
     public string Url { get; set; }
     public List<Data> DataSource { get; set; }
     public class Data
     {
-        //public string Logo { get; set; }
         public string Symbol { get; set; }
         public string Name { get; set; }
-        //public string Sector { get; set; }
+        public string Sector { get; set; }
         public string Country { get; set; }
-        //public string Ceo { get; set; }
         public override string ToString()
         {
             return JsonConvert.SerializeObject(this);

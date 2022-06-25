@@ -28,24 +28,24 @@ namespace Project.Services
             
             if (symbol == null)
             {
-                Console.WriteLine("Null symbol");
+                //Console.WriteLine("Null symbol");
                 throw new BadHttpRequestException("Wrong company format");
             }
-            Console.WriteLine($"symbol: {symbol}");
+            //Console.WriteLine($"symbol: {symbol}");
             var companyResponce = await _context.Companies.FirstOrDefaultAsync(c => c.Symbol.Equals(symbol));
-            Console.WriteLine($"comp: {companyResponce == null}");
+            //Console.WriteLine($"comp: {companyResponce == null}");
             if (companyResponce == null)
             {
                 //Console.WriteLine("Null company");
                 string responseBody = await _httpClient.GetStringAsync(
                 $"https://api.polygon.io/v3/reference/tickers/{symbol.ToUpper()}?apiKey={_configuration["Stocks API Key"]}");
-                Console.WriteLine($"{responseBody}");
+                //Console.WriteLine($"{responseBody}");
                 var responceClass = JsonSerializer.Deserialize<CompanyDTO>(responseBody);
                 if (responceClass == null)
                 {
                     Console.WriteLine("Null result");
                 }
-                Console.WriteLine($"{responceClass}");
+                //Console.WriteLine($"{responceClass}");
 
                 companyResponce = new Company
                 {
@@ -58,8 +58,8 @@ namespace Project.Services
                     Country = responceClass.results.locale,
                     Industry = "",
                     Sector = responceClass.results.sic_description,
-                    MarketCap = responceClass.results.market_cap.ToString(),
-                    EmployeesAmount = responceClass.results.total_employees.ToString(),
+                    MarketCap = $"{responceClass.results.market_cap}",
+                    EmployeesAmount = $"{responceClass.results.total_employees}",
                     Phone = responceClass.results.phone_number,
                     Ceo = "",
                     Url = responceClass.results.homepage_url,
@@ -76,7 +76,7 @@ namespace Project.Services
                     Active = responceClass.results.active
 
                 };
-                Console.WriteLine(companyResponce);
+                //Console.WriteLine(companyResponce);
                 await _context.Companies.AddAsync(companyResponce);
                 await _context.SaveChangesAsync();
                 
@@ -103,43 +103,45 @@ namespace Project.Services
         {
             var TimeSpanParameter = "hour";
             var TimeSpanMultiplier = int.Parse(multiplier);
-            var DateFrom = DateTime.Today.AddDays(-1).Date.ToString("yyyy-MM-dd");
-            var DateTo = DateTime.Today.AddDays(-1).Date.ToString("yyyy-MM-dd");
-            switch (timeSpan)
+            var DateFrom = DateTime.Today.AddDays(-1).Date;
+            var DateTo = DateTime.Today.AddDays(-1).Date;
+            var results = await _context.PricesTimeSpans.Where(x => x.Date > DateFrom && x.Date < DateTo).ToListAsync();
+            if(results == null)
             {
-                case "Weeks":
-                    TimeSpanParameter = "day";
-                    DateFrom = DateTime.Today.AddDays(-8).Date.ToString("yyyy-MM-dd");
-                    break;
-                case "Months":
-                    TimeSpanParameter = "day";
-                    DateFrom = DateTime.Today.AddDays(-1).AddMonths(-1*TimeSpanMultiplier).Date.ToString("yyyy-MM-dd");
-                    break;
+                switch (timeSpan)
+                {
+                    case "Weeks":
+                        TimeSpanParameter = "day";
+                        DateFrom = DateTime.Today.AddDays(-8).Date;
+                        break;
+                    case "Months":
+                        TimeSpanParameter = "day";
+                        DateFrom = DateTime.Today.AddDays(-1).AddMonths(-1 * TimeSpanMultiplier).Date;
+                        break;
+                }
+                string link = $"https://api.polygon.io/v2/aggs/ticker/{symbol}/range/{TimeSpanMultiplier}/{TimeSpanParameter}/{DateFrom.ToString("yyyy-MM-dd")}/{DateTo.ToString("yyyy-MM-dd")}?adjusted=true&sort=asc&apiKey=DVfT7O6xUbNbTdYdpsCApei4uYcJTS0U";
+                //Console.WriteLine(link);
+                string responseBody = await _httpClient.GetStringAsync(
+                    $"{link}");
+                var responseClass = JsonSerializer.Deserialize<TimeSpanDTO>(responseBody);
+                //Console.WriteLine($"{responseClass}");
+                DateTime dateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+                List<PricesTimeSpan> pricesTimeSpan = responseClass.results.Select(x => new PricesTimeSpan
+                {
+                    Date = dateTime.AddMilliseconds(x.t),
+                    Open = x.o,
+                    Low = x.l,
+                    Close = x.c,
+                    High = x.h,
+                    Volume = x.v
+                })
+                .ToList();
+                await _context.PricesTimeSpans.AddRangeAsync(pricesTimeSpan);
+                await _context.SaveChangesAsync();
+                return pricesTimeSpan;
             }
-            string link = $"https://api.polygon.io/v2/aggs/ticker/{symbol}/range/{TimeSpanMultiplier}/{TimeSpanParameter}/{DateFrom}/{DateTo}?adjusted=true&sort=asc&apiKey=DVfT7O6xUbNbTdYdpsCApei4uYcJTS0U";
-            Console.WriteLine(link);
-            string responseBody = await _httpClient.GetStringAsync(
-                $"{link}");
-            var responseClass = JsonSerializer.Deserialize<TimeSpanDTO>(responseBody);
-            //Console.WriteLine($"{responseClass}");
-            DateTime dateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
-            List<PricesTimeSpan> pricesTimeSpan = responseClass.results.Select(x => new PricesTimeSpan
-            {
-                Date = dateTime.AddMilliseconds(x.t),
-                Open = x.o,
-                Low = x.l,
-                Close = x.c,
-                High = x.h,
-                Volume = x.v
-            })
-            .ToList();
-            //await _context.PricesTimeSpans.AddRangeAsync(pricesTimeSpan);
-            //await _context.SaveChangesAsync();
-            /*foreach (var item in pricesTimeSpan)
-            {
-                Console.WriteLine(item);
-            }*/
-            return pricesTimeSpan;
+
+            return results;
         }
         public async Task AddToWatchlist(string symbol, string userToken)
         {
@@ -150,13 +152,7 @@ namespace Project.Services
             await _context.Watchlists.AddAsync(new Watchlist
             {
                 IdUser = IdUser,
-                IdCompany = company.IdCompany,
-                Logo = company.Logo,
-                Symbol = symbol,
-                Name = company.Name,
-                Sector = company.Sector,
-                Country = company.Country,
-                Ceo = company.Ceo
+                IdCompany = company.IdCompany
             });
             await _context.SaveChangesAsync();
             return;

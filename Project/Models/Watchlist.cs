@@ -15,17 +15,5 @@ namespace Project.Models
         [Required]
         [ForeignKey("IdCompany")]
         public Company Company { get; set; }
-        [Required]
-        public string Logo { get; set; }
-        [Required]
-        public string Symbol { get; set; }
-        [Required]
-        public string Name { get; set; }
-        [Required]
-        public string Sector { get; set; }
-        [Required]
-        public string Country { get; set; }
-        [Required]
-        public string Ceo { get; set; }
     }
 }
