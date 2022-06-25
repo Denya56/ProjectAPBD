@@ -20,7 +20,7 @@ namespace Project.Helper
             string hash = Convert.ToBase64String(KeyDerivation.Pbkdf2(
                 password: Password,
                 salt: salt,
-                prf: KeyDerivationPrf.HMACSHA1,
+                prf: KeyDerivationPrf.HMACSHA256,
                 iterationCount: 10000,
                 numBytesRequested: 256 / 8
                 ));
@@ -35,7 +35,7 @@ namespace Project.Helper
             string currentHashPassword = Convert.ToBase64String(KeyDerivation.Pbkdf2(
                  password: Password,
                 salt: saltByte,
-                prf: KeyDerivationPrf.HMACSHA1,
+                prf: KeyDerivationPrf.HMACSHA256,
                 iterationCount: 10000,
                 numBytesRequested: 256 / 8
                 ));
@@ -53,18 +53,17 @@ namespace Project.Helper
             }
         }
 
-        public static string GetUserIdFromAccToken(string AccessToken, string secret)
+        public static string GetUserIdFromAccToken(string AccessToken, string secret, string issuer, string audience)
         {
             var tokenValidParameter = new TokenValidationParameters
             {
-                ValidateAudience = true,
                 ValidateIssuer = true,
-                ValidateActor = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
                 ClockSkew = TimeSpan.FromMinutes(2),
-                ValidIssuer = "",
-                ValidAudience = "",
-                ValidateLifetime = false,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes())
+                ValidIssuer = issuer,
+                ValidAudience = audience,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret))
 
             };
             var tokenHandler = new JwtSecurityTokenHandler();
@@ -72,12 +71,12 @@ namespace Project.Helper
             SecurityToken securityToken;
 
             var principal = tokenHandler.ValidateToken(AccessToken, tokenValidParameter, out securityToken);
-            var jwtSecurityToken = securityToken as JwtSecurityToken;
+            //var jwtSecurityToken = securityToken as JwtSecurityToken;
 
-            if (jwtSecurityToken == null || jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
+            /*if (jwtSecurityToken == null || jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
             {
                 throw new SecurityTokenException("Invalid Token");
-            }
+            }*/
 
             var UserId = principal.FindFirst(ClaimTypes.Name)?.Value;
 
@@ -85,6 +84,7 @@ namespace Project.Helper
             {
                 throw new SecurityTokenException($"Missing Claim: {ClaimTypes.Name}");
             }
+            //Console.WriteLine(UserId);
             return UserId;
         }
     }

@@ -25,15 +25,17 @@ namespace Project.Services
 
         public async Task<Company> GetCompanyAsync(string symbol)
         {
-            Console.WriteLine("LOL");
+            //Console.WriteLine("LOL");
             if (symbol == null)
             {
+                Console.WriteLine("Null symbol");
                 throw new BadHttpRequestException("Wrong company format");
             }
-            var companyResponce = await _context.Companies.FirstOrDefaultAsync(c => c.Symbol.Equals(symbol));
+            var companyResponce = await _context.Companies.FirstOrDefaultAsync(c => c.Symbol.Equals(symbol.ToUpper()));
 
             if(companyResponce == null)
             {
+                //Console.WriteLine("Null company");
                 string responseBody = await _httpClient.GetStringAsync(
                 $"https://api.polygon.io/v3/reference/tickers/{symbol}?apiKey={_configuration["Stocks API Key"]}");
 
@@ -42,7 +44,7 @@ namespace Project.Services
                 {
                     Console.WriteLine("Null result");
                 }
-                Console.WriteLine($"{responceClass}");
+                //Console.WriteLine($"{responceClass}");
 
                 companyResponce = new Company
                 {
@@ -75,6 +77,7 @@ namespace Project.Services
                 };
                 await _context.Companies.AddAsync(companyResponce);
                 await _context.SaveChangesAsync();
+                //Console.WriteLine(companyResponce);
                 return companyResponce;
             }
             return companyResponce;
@@ -121,8 +124,10 @@ namespace Project.Services
         }
         public async Task AddToWatchlist(string symbol, string userToken)
         {
-            var company = await _context.Companies.FirstOrDefaultAsync(x => x.Symbol.Equals(symbol));
-            int IdUser = int.Parse(SecurityHelper.GetUserIdFromAccToken(userToken, _configuration["SecretKey"]));
+            var company = await GetCompanyAsync(symbol);
+            Console.WriteLine($"symbol: {company.Symbol}");
+            int IdUser = int.Parse(SecurityHelper.GetUserIdFromAccToken(userToken, _configuration["SecretKey"], _configuration["Issuer"], _configuration["Audience"]));
+            Console.WriteLine($"id: {IdUser}");
             await _context.Watchlists.AddAsync(new Watchlist
             {
                 IdUser = IdUser,
@@ -137,10 +142,21 @@ namespace Project.Services
             await _context.SaveChangesAsync();
             return;
         }
-        public async Task<List<Watchlist>> GetWatchlist(string userToken)
+        
+        public async Task<List<WatchlistDTO>> GetWatchlist(string userToken)
         {
-            int IdUser = int.Parse(SecurityHelper.GetUserIdFromAccToken(userToken, _configuration["SecretKey"]));
-            var watchlist = await _context.Watchlists.Where(x => x.IdUser == IdUser).ToListAsync();
+            int IdUser = int.Parse(SecurityHelper.GetUserIdFromAccToken(userToken, _configuration["SecretKey"], _configuration["Issuer"], _configuration["Audience"]));
+            var watchlist = await _context.Watchlists.Where(x => x.IdUser == IdUser)
+                .Include(a => a.Company)
+                .Select(w => new WatchlistDTO
+                {   
+                    Logo = w.Company.Logo,
+                    Symbol = w.Company.Symbol,
+                    Name = w.Company.Name,
+                    Sector = w.Company.Sector,
+                    Country = w.Company.Country,
+                    Ceo = w.Company.Ceo
+                }).ToListAsync();
             return watchlist;
         }
         /*private async Task<List<string>> GetCompaniesListAsync(string link)

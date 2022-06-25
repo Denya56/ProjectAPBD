@@ -4,43 +4,41 @@
 @using Project.Exceptions
 @using System.ComponentModel.DataAnnotations;
 @using Project.Services.UserAuth
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
 
 @inject ILogger<Login> Logger
 @inject IAuthenticationServices _authServices
 @inject NavigationManager NavigationManager
+@inject ProtectedLocalStorage ProtectedLocalStorage
 
-    <EditForm Model="@userLogin" style="align-content:space-around; position:absolute; top:40%; left:50%" OnValidSubmit="@HandleValidLogin">
-        <DataAnnotationsValidator />
-        <div>
-            <h1>Login</h1>
-            <div class="form-group">
-                <lable for="Login">Login</lable>
-                <InputText id="login" placeholder="Login" @bind-Value="userLogin.Login" class="border" />
-            </div>
-            <div class="form-group">
-                <lable for="Password">Password</lable>
-                <InputText id="password" type="password" placeholder="Password" @bind-Value="userLogin.Password" class="border" />
-            </div>
-            <div class="text-right">
-                <button class="rounded-2"
-                    style="width:100px; height:35px;-webkit-text-fill-color:white; border-color:rebeccapurple; background-color:rebeccapurple"
+<EditForm Model="@userLogin" style="align-content:space-around; position:absolute; top:40%; left:50%" OnValidSubmit="@HandleValidLogin">
+    <DataAnnotationsValidator />
+    <div>
+        <h1>Login</h1>
+        <div class="form-group">
+            <lable for="Login">Login</lable>
+            <InputText id="login" placeholder="Login" @bind-Value="userLogin.Login" class="border" />
+        </div>
+        <div class="form-group">
+            <lable for="Password">Password</lable>
+            <InputText id="password" type="password" placeholder="Password" @bind-Value="userLogin.Password" class="border" />
+        </div>
+        <div class="text-right">
+            <button class="rounded-2"
+                    style="width:100px; height:35px; position:relative; top:5px; -webkit-text-fill-color:white; border-color:rebeccapurple; background-color:rebeccapurple"
                     type="submit">
 
-                    Log In
+                Log In
 
-                </button>
-            </div>
-            <div class="row">
-                <div class="col-sm-12">
-                    <button class="rounded-2"
-                        style="width:100px; height:35px; position:relative; top:35%; left:60%; -webkit-text-fill-color:white; border-color:rebeccapurple; background-color:rebeccapurple"
-                        @onclick="ToggleRegister">
-                        Register
-                    </button>
-                </div>
-            </div>
+            </button>
         </div>
-    </EditForm>
+        <button class="rounded-2"
+                style="width:100px; height:35px; position:relative; top:-30px; left:50%; -webkit-text-fill-color:white; border-color:rebeccapurple; background-color:rebeccapurple"
+                @onclick="ToggleRegister">
+            Register
+        </button>
+    </div>
+</EditForm>
 @if (@RegisterShown)
 {
     <div class="modal" tabindex="-1" style="display:block" role="dialog">
@@ -92,8 +90,13 @@
 @code {
     private bool LoginShown { get; set; } = true;
     private bool RegisterShown { get; set; } = false;
-    private bool SearchShown { get; set; } = false;
-    private bool ChartShown { get; set; } = false;
+    public string LocalStorageKey { get; set; }
+    public string LocalStorageValue { get; set; }
+
+    private async Task StoreKeyAsync()
+    {
+        await ProtectedLocalStorage.SetAsync(LocalStorageKey, LocalStorageValue);
+    }
 
     private void ToggleRegister()
     {
@@ -112,7 +115,7 @@
         [Required]
         [StringLength(15, ErrorMessage = "Login is too long. 15 characters max")]
         [MinLength(3, ErrorMessage = "Login is too short. 3 characters min")]
-        [RegularExpression(@"^[a-zA-Z0-9_-]$", ErrorMessage = "Login can only contain lower or uppercase letters, numbers and/or _ -")]
+        [RegularExpression(@"^[a-zA-Z0-9_-]+$", ErrorMessage = "Login can only contain lower or uppercase letters, numbers and/or _ -")]
         public string Login { get; set; }
         [Required]
         //[RegularExpression(@"^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9]).{8,}$", ErrorMessage = "Minimum eight characters, at least one upper case English letter, one lower case English letter, one number and one special character")]
@@ -131,7 +134,10 @@
         try
         {
             ac = await _authServices.LoginAsync(userLogin);
+            LocalStorageKey = "Access Token";
+            LocalStorageValue = ac.AccessToken;
             Logger.LogInformation($"Access Token: {ac.AccessToken}");
+            await StoreKeyAsync();
             NavigateToSearchPage();
 
         }
@@ -151,10 +157,10 @@
         Logger.LogInformation("HandleValidRegister called");
         Logger.LogInformation("Login: " + userRegister.Login + "\tPassword: " + userRegister.Password);
         await _authServices.RegisterAsync(new UserDTO
-        {
-            Login = userRegister.Login,
-            Password = userRegister.Password
-        });
+            {
+                Login = userRegister.Login,
+                Password = userRegister.Password
+            });
         ToggleRegister();
     }
     private void NavigateToSearchPage()

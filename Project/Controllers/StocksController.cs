@@ -1,12 +1,13 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Project.DTOs;
 using Project.Models;
 using Project.Services;
 
 namespace Project.Controllers
 {
-    //[Authorize]
+    [Authorize]
     [Route("api/stocks")]
     [ApiController]
     public class StocksController : ControllerBase
@@ -37,6 +38,17 @@ namespace Project.Controllers
                 Console.WriteLine(item);
             }*/
             return s.AsQueryable();
+        }
+        [HttpGet("watchlist")]
+        public async Task<List<WatchlistDTO>> GetWatchlistAsync([FromQuery] string token)
+        {
+            Console.WriteLine($"token controller: {token}");
+            var s = await _stocksServices.GetWatchlist(token);
+            /*foreach (var item in s)
+            {
+                Console.WriteLine(item);
+            }*/
+            return s;
         }
     }
 }

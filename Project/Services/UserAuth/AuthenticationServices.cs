@@ -56,7 +56,7 @@ namespace Project.Services.UserAuth
             {
                 Claim[] claims = new[]
                 {
-                    new Claim(ClaimTypes.Name,"name"),
+                    new Claim(ClaimTypes.Name, appUser.IdUser.ToString()),
                     new Claim(ClaimTypes.Role,"admin"),
                     new Claim(ClaimTypes.Role,"user")
                 };
@@ -68,7 +68,7 @@ namespace Project.Services.UserAuth
                     issuer: _configuration["Issuer"],
                     audience: _configuration["Audience"],
                     claims: claims,
-                    expires: DateTime.Now.AddMinutes(3),
+                    expires: DateTime.Now.AddMinutes(2),
                     signingCredentials: creds
                     );
 

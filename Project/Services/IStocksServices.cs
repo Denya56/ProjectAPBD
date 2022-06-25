@@ -11,6 +11,6 @@ namespace Project.Services
         Task<List<string>> GetCompaniesAsync(string link);
         Task<List<PricesTimeSpan>> GetChartDataTimeSpanAsync(string symbol);
         Task AddToWatchlist(string symbol, string userToken);
-        Task<List<Watchlist>> GetWatchlist(string userToken);
+        Task<List<WatchlistDTO>> GetWatchlist(string userToken);
     }
 }
