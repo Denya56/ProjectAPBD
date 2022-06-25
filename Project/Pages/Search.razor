@@ -23,15 +23,14 @@
         Demonstration of equivalent HTML binding:
         <input value="@InputValue"
         @onchange="@((ChangeEventArgs __e) => InputValue = __e?.Value?.ToString())" />
-        </label>*@
+        </label>
         <lable>
             @data.ticker
-        </lable>
+        </lable>*@
         <SfAutoComplete TValue="string" TItem="string" @oninput="@((ChangeEventArgs __e) => @GetAutoComlleteListAsync(__e))"
                         @bind-Value="data.ticker" Placeholder="e.g. TSLA" DataSource="@resultList">
             <AutoCompleteFieldSettings Value="ticker"></AutoCompleteFieldSettings>
         </SfAutoComplete>
-        <ValidationMessage For="()=>data.ticker" />
     </div>
     <div class="submit-btn">
         <div class="rounded-2">
@@ -53,17 +52,18 @@
 {
     <div class="control-section">
         <div>
-            <SfStockChart EnableSelector="false">
+            <SfStockChart @ref="chart" EnableSelector="false" EnableCustomRange="false">
+                <StockChartEvents PeriodChanged="@((StockChartPeriodChangedEventArgs __e) => @PeriodChange(__e))"></StockChartEvents>
                 <StockChartPeriods>
-                    <StockChartPeriod IntervalType=RangeIntervalType.Days Interval="1" Text='1 Day' Selected="true"></StockChartPeriod>
-                    <StockChartPeriod IntervalType=RangeIntervalType.Weeks Interval="1" Text='1 Week'></StockChartPeriod>
-                    <StockChartPeriod IntervalType=RangeIntervalType.Days Interval="1" Text='1 Month'></StockChartPeriod>
+                    <StockChartPeriod IntervalType=RangeIntervalType.Days Interval="1" Text='Prev Day' Selected="true" ></StockChartPeriod>
+                    <StockChartPeriod IntervalType=RangeIntervalType.Weeks Interval="1" Text='1 Week' ></StockChartPeriod>
+                    <StockChartPeriod IntervalType=RangeIntervalType.Months Interval="1" Text='1 Month' ></StockChartPeriod>
                     <StockChartPeriod IntervalType=RangeIntervalType.Months Interval="3" Text='3 Months'></StockChartPeriod>
                 </StockChartPeriods>
-                <StockChartPrimaryXAxis>
+                <StockChartPrimaryXAxis IntervalType="@XAxisInterval">
                 </StockChartPrimaryXAxis>
                 <StockChartSeriesCollection>
-                    <StockChartSeries DataSource="@DataSource" Type="ChartSeriesType.HiloOpenClose" XName="Date" High="High" Low="Low" Open="Open" Close="Close" Volume="Volume"></StockChartSeries>
+                    <StockChartSeries  DataSource="@DataSource" Type="ChartSeriesType.HiloOpenClose" XName="Date" High="High" Low="Low" Open="Open" Close="Close" Volume="Volume"></StockChartSeries>
                 </StockChartSeriesCollection>
             </SfStockChart>
         </div>
@@ -79,11 +79,6 @@
         display: flex;
         justify-content: center;
         padding: 20px 0px 0px;
-    }
-
-    .validation-message {
-        color: red;
-        padding: 5px 0px 0px;
     }
 </style>
 
@@ -101,28 +96,27 @@
     //public tickers = res.results.Select(x => x.ticker).toList();
     //public Query Query = new Query().Select(new List<string> { "FirstName" }).Take(6).RequiresCount();
     //public string Url = $"https://api.polygon.io/v3/reference/tickers?search={InputValue}&active=true&sort=ticker&order=asc&limit=100";
+    private SfStockChart chart = new SfStockChart();
     private bool ChartShown { get; set; } = false;
     private string? InputValue { get; set; }
     //private string? SearchResult { get; set; }
     private DebounceDispatcher debounceDispatcher { get; set; } = new DebounceDispatcher(2000);
     public string LocalStorageQueryKey { get; set; } = "Access Token";
     public string LocalStorageQueryValue { get; set; }
+    private StockChartPeriod SelectedPeriod = new StockChartPeriod();
+    private IntervalType XAxisInterval = new IntervalType();
     public class Data
     {
-        [Required(ErrorMessage = "The Ticker Name field is required.")]
         public string ticker;
     }
 
     public Data data = new Data();
     public List<string> resultList = new List<string>();
     public List<string> tickerList = new List<string>();
-    private void ToggleChart()
-    {
-        ChartShown = !ChartShown;
-    }
 
     private async Task GetValueAsync()
     {
+
         var result = await ProtectedLocalStorage.GetAsync<string>(LocalStorageQueryKey);
 
         if (result.Success)
@@ -130,14 +124,35 @@
             LocalStorageQueryValue = result.Value;
         }
     }
+    private async void PeriodChange(StockChartPeriodChangedEventArgs __e)
+    {
+        var span = __e.Periods.First(x => x.Selected == true);
+        SelectedPeriod.IntervalType = span.IntervalType;
+        SelectedPeriod.Interval = span.Interval;
+        if(SelectedPeriod.IntervalType.Equals(RangeIntervalType.Months))
+        {
+            XAxisInterval = IntervalType.Days;
+        }
+        else if(SelectedPeriod.IntervalType.Equals(RangeIntervalType.Days))
+        {
+            XAxisInterval = IntervalType.Hours;
+        }
+        await ChartInitialize();
 
+    }
+    protected override void OnInitialized()
+    {
+        SelectedPeriod.IntervalType = RangeIntervalType.Days;
+        XAxisInterval = IntervalType.Hours;
+        SelectedPeriod.Interval = 1;
+    }
     public async Task GetAutoComlleteListAsync(ChangeEventArgs __e)
     {
         await debounceDispatcher.DebounceAsync(async () =>
         {
             InputValue = __e?.Value?.ToString();
             string url = $"https://api.polygon.io/v3/reference/tickers?search={InputValue}&active=true&sort=ticker&order=asc&limit=100";
-            Console.WriteLine(url);
+        //Console.WriteLine(url);
             if (InputValue == null)
             {
                 url = $"https://api.polygon.io/v3/reference/tickers?&active=true&sort=ticker&order=asc&limit=100";
@@ -148,16 +163,15 @@
         });
         return;
     }
-
     private async void OnValidSearchSubmit()
     {
         //SearchResult = InputValue;
+        //Console.WriteLine(ChartShown); 
         await ChartInitialize();
-        ToggleChart();
-        Console.WriteLine("Valid");
+        //Console.WriteLine(ChartShown);
     }
     // Chart
-    private List<StockChartData> DataSource;
+    private List<StockChartData> DataSource = new List<StockChartData>();
     public class StockChartData
     {
         public DateTime Date { get; set; }
@@ -171,36 +185,49 @@
             return JsonConvert.SerializeObject(this);
         }
     }
-
     private async Task ChartInitialize()
     {
-        Console.WriteLine(data.ticker);
-        Http.DefaultRequestHeaders.Add("Authorization", $"Bearer {LocalStorageQueryValue}");
-        DataSource = await Http.GetFromJsonAsync<List<StockChartData>>($"http://localhost:5158/api/stocks/timeSpan?symbol={data.ticker.ToUpper()}");
-        Console.WriteLine("Start:");
-        if (DataSource != null)
+        //Console.WriteLine($"chart: {data.ticker}");
+
+
+        //Console.WriteLine($"token: {LocalStorageQueryValue}");
+        //Console.WriteLine($"{SelectedPeriod.IntervalType}");
+        DataSource = await Http.GetFromJsonAsync<List<StockChartData>>(
+            $"http://localhost:5158/api/stocks/timeSpan?symbol={data.ticker.ToUpper()}&timeSpan={SelectedPeriod.IntervalType}&multiplier={SelectedPeriod.Interval}");
+        //Console.WriteLine($"Start:");
+        if(ChartShown)
         {
-            //foreach (var item in DataSource)
-            //{
-            //    Console.WriteLine(item);
-            //}
+            //Console.WriteLine($"show");
+            chart.UpdateStockChart();
+
         }
-        else
+        if(ChartShown == false)
         {
-            Console.WriteLine("null");
+
+            ChartShown = true;
         }
-        Http.DefaultRequestHeaders.Clear();
+        StateHasChanged();      
     }
     private async void AddToWatchlist()
     {
         await GetValueAsync();
         string userToken = LocalStorageQueryValue;
-        //Console.WriteLine($"token: {userToken}");
+        Console.WriteLine($"ticker: {data.ticker}");
         await _stockServices.AddToWatchlist(data.ticker, userToken);
         Console.WriteLine("Added");
     }
     private void NavigateToWatchlistPage()
     {
         NavigationManager.NavigateTo("http://localhost:5158/watchlist", true);
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if(firstRender)
+        {
+            await GetValueAsync();
+            Http.DefaultRequestHeaders.Add("Authorization", $"Bearer {LocalStorageQueryValue}");
+        }
+        
+        
     }
 }

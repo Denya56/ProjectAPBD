@@ -9,7 +9,7 @@ namespace Project.Services
     {
         Task<Company> GetCompanyAsync(string sympol);
         Task<List<string>> GetCompaniesAsync(string link);
-        Task<List<PricesTimeSpan>> GetChartDataTimeSpanAsync(string symbol);
+        Task<List<PricesTimeSpan>> GetChartDataTimeSpanAsync(string symbol, string timeSpan, string multiplier);
         Task AddToWatchlist(string symbol, string userToken);
         Task<List<WatchlistDTO>> GetWatchlist(string userToken);
     }

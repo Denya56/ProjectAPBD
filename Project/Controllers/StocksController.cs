@@ -30,9 +30,9 @@ namespace Project.Controllers
             return _stocksServices.GetCompaniesAsync("sdf");
         }
         [HttpGet("timeSpan")]
-        public async Task<IQueryable<PricesTimeSpan>> GetChartData([FromQuery]string symbol)
+        public async Task<IQueryable<PricesTimeSpan>> GetChartData([FromQuery]string symbol, [FromQuery]string timeSpan, [FromQuery] string multiplier)
         {
-            var s = await _stocksServices.GetChartDataTimeSpanAsync(symbol);
+            var s = await _stocksServices.GetChartDataTimeSpanAsync(symbol, timeSpan, multiplier);
             /*foreach (var item in s)
             {
                 Console.WriteLine(item);
