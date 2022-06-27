@@ -1,5 +1,4 @@
 ﻿using Newtonsoft.Json;
-using Project.Models.UserAuth;
 using System.ComponentModel.DataAnnotations;
 
 namespace Project.Models

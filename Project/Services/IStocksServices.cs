@@ -12,5 +12,6 @@ namespace Project.Services
         Task<List<PricesTimeSpan>> GetChartDataTimeSpanAsync(string symbol, string timeSpan, string multiplier);
         Task AddToWatchlist(string symbol, string userToken);
         Task<List<WatchlistDTO>> GetWatchlist(string userToken);
+        Task DeleteFromWatchlist(int idCompany);
     }
 }

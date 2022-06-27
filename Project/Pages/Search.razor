@@ -48,15 +48,34 @@
                   IsPrimary="true" @onclick="@NavigateToWatchlistPage">Watchlist</SfButton>
 </div>
 
+
 @if (@ChartShown)
 {
+    <div>
+        <p>
+            <img style="width:70px; height:70px;" src="@comp.Logo" alt="Logo"/>
+        </p>
+        <p>
+            <label class="example-label" style="position:relative; top:-90px; left:105px">Symbol: @comp.Symbol</label>
+        </p>
+        <p>
+            <label class="example-label" style="position:relative; top:-50px; left:105px">Url: @comp.Url</label>
+        </p>
+        <p>
+            <label class="example-label" style="position:relative; top:-180px; left:305px">Address: @comp.HqAddress</label>
+        </p>
+        <p>
+            <label class="example-label" style="position:relative; top:-140px; left:305px">Active: @comp.Active</label>
+        </p>
+    </div>
+    
     <div class="control-section">
         <div>
-            <SfStockChart @ref="chart" EnableSelector="false" EnableCustomRange="false">
+            <SfStockChart @ref="chart" EnablePeriodSelector="true" EnableSelector="false" EnableCustomRange="false">
                 <StockChartEvents PeriodChanged="@((StockChartPeriodChangedEventArgs __e) => @PeriodChange(__e))"></StockChartEvents>
                 <StockChartPeriods>
-                    <StockChartPeriod IntervalType=RangeIntervalType.Days Interval="1" Text='Prev Day' Selected="true" ></StockChartPeriod>
-                    <StockChartPeriod IntervalType=RangeIntervalType.Weeks Interval="1" Text='1 Week' ></StockChartPeriod>
+                    <StockChartPeriod IntervalType=RangeIntervalType.Days Interval="1" Text='Prev Day'  ></StockChartPeriod>
+                    <StockChartPeriod IntervalType=RangeIntervalType.Weeks Interval="1" Text='1 Week' Selected="true"></StockChartPeriod>
                     <StockChartPeriod IntervalType=RangeIntervalType.Months Interval="1" Text='1 Month' ></StockChartPeriod>
                     <StockChartPeriod IntervalType=RangeIntervalType.Months Interval="3" Text='3 Months'></StockChartPeriod>
                 </StockChartPeriods>
@@ -105,14 +124,26 @@
     public string LocalStorageQueryValue { get; set; }
     private StockChartPeriod SelectedPeriod = new StockChartPeriod();
     private IntervalType XAxisInterval = new IntervalType();
-    public class Data
+    private class Data
     {
         public string ticker;
     }
-
-    public Data data = new Data();
-    public List<string> resultList = new List<string>();
-    public List<string> tickerList = new List<string>();
+    private class CompanyInfo
+    {
+        public string Logo { get; set; }
+        public string Symbol { get; set; }
+        public string Url { get; set; }
+        public string HqAddress { get; set; }
+        public bool Active { get; set; }
+        public override string ToString()
+        {
+            return JsonConvert.SerializeObject(this);
+        }
+    }
+    private CompanyInfo comp = new CompanyInfo();
+    private Data data = new Data();
+    private List<string> resultList = new List<string>();
+    private List<string> tickerList = new List<string>();
 
     private async Task GetValueAsync()
     {
@@ -122,6 +153,7 @@
         if (result.Success)
         {
             LocalStorageQueryValue = result.Value;
+            Console.WriteLine($"val: {LocalStorageQueryValue}");
         }
     }
     private async void PeriodChange(StockChartPeriodChangedEventArgs __e)
@@ -142,8 +174,8 @@
     }
     protected override void OnInitialized()
     {
-        SelectedPeriod.IntervalType = RangeIntervalType.Days;
-        XAxisInterval = IntervalType.Hours;
+        SelectedPeriod.IntervalType = RangeIntervalType.Weeks;
+        XAxisInterval = IntervalType.Days;
         SelectedPeriod.Interval = 1;
     }
     public async Task GetAutoComlleteListAsync(ChangeEventArgs __e)
@@ -167,11 +199,19 @@
     {
         //SearchResult = InputValue;
         //Console.WriteLine(ChartShown); 
+
         await ChartInitialize();
+        await GetDashboard();
+        StateHasChanged();
         //Console.WriteLine(ChartShown);
     }
+    private async Task GetDashboard()
+    {
+        comp = await Http.GetFromJsonAsync<CompanyInfo>($"http://localhost:5158/api/stocks/company?symbol={data.ticker}");
+        Console.WriteLine($"comp: {comp}");
+    }
     // Chart
-    private List<StockChartData> DataSource = new List<StockChartData>();
+    private List<StockChartData> DataSource;
     public class StockChartData
     {
         public DateTime Date { get; set; }
@@ -192,8 +232,10 @@
 
         //Console.WriteLine($"token: {LocalStorageQueryValue}");
         //Console.WriteLine($"{SelectedPeriod.IntervalType}");
+        
         DataSource = await Http.GetFromJsonAsync<List<StockChartData>>(
             $"http://localhost:5158/api/stocks/timeSpan?symbol={data.ticker.ToUpper()}&timeSpan={SelectedPeriod.IntervalType}&multiplier={SelectedPeriod.Interval}");
+        //Console.WriteLine($"Count: {DataSource.Count}");
         //Console.WriteLine($"Start:");
         if(ChartShown)
         {
@@ -206,7 +248,7 @@
 
             ChartShown = true;
         }
-        StateHasChanged();      
+        StateHasChanged();
     }
     private async void AddToWatchlist()
     {

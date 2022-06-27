@@ -1,0 +1,119 @@
+﻿@page "/watchlist"
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@using Project.DTOs
+@using System.Net.Http.Json
+@using Newtonsoft.Json
+@inject ProtectedLocalStorage ProtectedLocalStorage
+@inject HttpClient Http
+@using Project.Services
+
+@inject IStocksServices _stockServices;
+<h3>Watchlist</h3>
+
+<SfGrid @ref="grid" DataSource="@DataSource" Toolbar="@(new List<string>() {"Delete"})" AllowPaging="true" AllowSorting="true" AllowFiltering="true">
+    <GridEditSettings AllowDeleting="true"></GridEditSettings>
+    <GridPageSettings PageSize="5"></GridPageSettings>
+     <GridEvents OnActionBegin="ActionBeginHandler" OnActionComplete="ActionCompleteHandler" TValue="WatchlistDTO"></GridEvents>
+    <GridColumns>
+        <GridColumn HeaderText="Logo" Width="90">
+            <Template>
+                @{
+                    var company = (context as WatchlistDTO);
+                    <div class="image">
+                        <img src = "@($"{company.Logo}")" alt="Logo"/>
+                    </div>
+                }
+            </Template>
+        </GridColumn>
+        <GridColumn Field=@nameof(WatchlistDTO.Symbol) HeaderText="Symbol" Width="90"></GridColumn>
+        <GridColumn Field=@nameof(WatchlistDTO.Name) HeaderText="Name" Width="90"></GridColumn>
+        <GridColumn Field=@nameof(WatchlistDTO.Sector) HeaderText="Sector" Width="90"></GridColumn>
+        <GridColumn Field=@nameof(WatchlistDTO.Country) HeaderText="Country" Width="90"></GridColumn>
+    </GridColumns>
+</SfGrid>
+<style>
+    .image img {
+        height: 55px;
+        width: 55px;
+    }
+</style>
+@*<SfGrid DataSource="@Orders" AllowPaging="true">
+ <GridPageSettings PageSize="5"></GridPageSettings>
+   <GridColumns>
+     <GridColumn Field=@nameof(Order.OrderID) HeaderText="Order ID" TextAlign="TextAlign.Right" Width="120"></GridColumn>
+     <GridColumn Field=@nameof(Order.CustomerID) HeaderText="Customer Name" Width="150"></GridColumn>
+     <GridColumn Field=@nameof(Order.OrderDate) HeaderText=" Order Date" Format="d" Type="ColumnType.Date" TextAlign="TextAlign.Right" Width="130"></GridColumn>
+     <GridColumn Field=@nameof(Order.Freight) HeaderText="Freight" Format="C2" TextAlign="TextAlign.Right" Width="120"></GridColumn>
+   </GridColumns>
+</SfGrid>*@
+
+@code {
+    private string LocalStorageQueryKey { get; set; } = "Access Token";
+    private string LocalStorageQueryValue { get; set; }
+    private SfGrid<WatchlistDTO> grid = new SfGrid<WatchlistDTO>();
+    private string Url { get; set; }
+    private List<WatchlistDTO> DataSource { get; set; }
+    public class Data
+    {
+        public string Symbol { get; set; }
+        public string Name { get; set; }
+        public string Sector { get; set; }
+        public string Country { get; set; }
+        public override string ToString()
+        {
+            return JsonConvert.SerializeObject(this);
+        }
+    }
+    private async Task GetValueAsync()
+    {
+        var result = await ProtectedLocalStorage.GetAsync<string>(LocalStorageQueryKey);
+
+        if (result.Success)
+        {
+            LocalStorageQueryValue = result.Value;
+        }
+        //Console.WriteLine($"token: {LocalStorageQueryValue}");
+        Http.DefaultRequestHeaders.Add("Authorization", $"Bearer {LocalStorageQueryValue}");
+        DataSource = await Http.GetFromJsonAsync<List<WatchlistDTO>>($"http://localhost:5158/api/stocks/watchlist?token={LocalStorageQueryValue}");
+        foreach (var item in DataSource)
+        {
+            Console.WriteLine(item);
+        }
+        Http.DefaultRequestHeaders.Clear();
+    } 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if(firstRender)
+        {
+            //Console.WriteLine("lolll");
+            await GetValueAsync();
+
+            StateHasChanged();    
+        }
+
+        //base.OnAfterRender(firstRender);
+    }
+    public async Task ActionBeginHandler(ActionEventArgs<WatchlistDTO> Args)
+    {
+        //Console.WriteLine($"1{Args.RequestType}");
+        if (Args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
+        {
+            await _stockServices.DeleteFromWatchlist(Args.Data.IdCompany);
+            //Console.WriteLine($"1lol");
+            DataSource = await _stockServices.GetWatchlist(LocalStorageQueryValue);
+            //Console.WriteLine($"1lol");
+            //await grid.Refresh();
+            //Console.WriteLine($"2lol");
+        }
+    }
+    public async Task ActionCompleteHandler(ActionEventArgs<WatchlistDTO> Args)
+    {
+        //Console.WriteLine($"2{Args.RequestType}");
+        if (Args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
+        {
+            DataSource = await _stockServices.GetWatchlist(LocalStorageQueryValue);
+            
+        }
+        
+    }
+}
