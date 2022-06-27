@@ -3,9 +3,10 @@
 @using Project.DTOs
 @using System.Net.Http.Json
 @using Newtonsoft.Json
+@using Project.Services
+
 @inject ProtectedLocalStorage ProtectedLocalStorage
 @inject HttpClient Http
-@using Project.Services
 
 @inject IStocksServices _stockServices;
 <h3>Watchlist</h3>
@@ -75,10 +76,6 @@
         //Console.WriteLine($"token: {LocalStorageQueryValue}");
         Http.DefaultRequestHeaders.Add("Authorization", $"Bearer {LocalStorageQueryValue}");
         DataSource = await Http.GetFromJsonAsync<List<WatchlistDTO>>($"http://localhost:5158/api/stocks/watchlist?token={LocalStorageQueryValue}");
-        foreach (var item in DataSource)
-        {
-            Console.WriteLine(item);
-        }
         Http.DefaultRequestHeaders.Clear();
     } 
     protected override async Task OnAfterRenderAsync(bool firstRender)

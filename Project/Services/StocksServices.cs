@@ -25,7 +25,7 @@ namespace Project.Services
 
         public async Task<Company> GetCompanyAsync(string symbol)
         {
-            
+
             if (symbol == null)
             {
                 //Console.WriteLine("Null symbol");
@@ -48,7 +48,7 @@ namespace Project.Services
                 //Console.WriteLine($"{responceClass}");
 
                 var logo = responceClass.results.branding == null ? "" : $"{responceClass.results.branding.logo_url}?apiKey={_configuration["Stocks API Key"]}";
-                var address = (responceClass.results.address == null) ? "" : 
+                var address = (responceClass.results.address == null) ? "" :
                     $"{responceClass.results.address.address1} {responceClass.results.address.city} {responceClass.results.address.state}, {responceClass.results.address.postal_code}";
                 var state = (responceClass.results.address == null) ? "" : $"{responceClass.results.address.state}";
                 companyResponce = new Company
@@ -83,16 +83,16 @@ namespace Project.Services
                 //Console.WriteLine(companyResponce);
                 await _context.Companies.AddAsync(companyResponce);
                 await _context.SaveChangesAsync();
-                
+
                 return companyResponce;
             }
             return companyResponce;
         }
-        
+
         public async Task<List<string>> GetCompaniesAsync(string link)
         {
             string responseBody = await _httpClient.GetStringAsync(
-                $"{link}&apiKey={_configuration["Stocks API Key"]}");
+            $"{link}&apiKey={_configuration["Stocks API Key"]}");
             var responseClass = JsonSerializer.Deserialize<CompaniesListDTO>(responseBody);
             var list = responseClass.results.Select(x => x.ticker).ToList();
 
@@ -131,11 +131,12 @@ namespace Project.Services
                 var results = await _context.PricesTimeSpans.Where(x => x.Date > DateFrom && x.Date < DateTo).ToListAsync();
                 return results;
             }
-            Console.WriteLine($"{responseClass}");
+            //Console.WriteLine($"{responseClass}");
+            //var s = System.Net.HttpStatusCode.BadRequest;
             DateTime dateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
-            if(responseClass.results != null)
+            if (responseClass.results != null)
             {
-                 pricesTimeSpan = responseClass.results.Select(x => new PricesTimeSpan
+                pricesTimeSpan = responseClass.results.Select(x => new PricesTimeSpan
                 {
                     Date = dateTime.AddMilliseconds(x.t),
                     Open = x.o,
@@ -144,11 +145,11 @@ namespace Project.Services
                     High = x.h,
                     Volume = x.v
                 })
-                .ToList();
+               .ToList();
             }
             await _context.PricesTimeSpans.AddRangeAsync(pricesTimeSpan);
             await _context.SaveChangesAsync();
-            return pricesTimeSpan;            
+            return pricesTimeSpan;
         }
         public async Task AddToWatchlist(string symbol, string userToken)
         {
@@ -156,22 +157,32 @@ namespace Project.Services
             //Console.WriteLine($"symbol: {company.Symbol}");
             int IdUser = int.Parse(SecurityHelper.GetUserIdFromAccToken(userToken, _configuration["SecretKey"], _configuration["Issuer"], _configuration["Audience"]));
             //Console.WriteLine($"id: {IdUser}");
-            await _context.Watchlists.AddAsync(new Watchlist
+            var item = await _context.Watchlists.FirstAsync(x => x.IdUser == IdUser && x.IdCompany == company.IdCompany);
+            //Console.WriteLine($"in: {IdUser} {company.IdCompany}");
+            //Console.WriteLine($"out: {item.IdUser} {item.IdCompany}");
+            if (item != null)
             {
-                IdUser = IdUser,
-                IdCompany = company.IdCompany
-            });
-            await _context.SaveChangesAsync();
+                throw new BadHttpRequestException("Company is already in the watchlist", StatusCodes.Status400BadRequest);
+            }
+            else
+            {
+                await _context.Watchlists.AddAsync(new Watchlist
+                {
+                    IdUser = IdUser,
+                    IdCompany = company.IdCompany
+                });
+                await _context.SaveChangesAsync();
+            }
             return;
         }
-        
+
         public async Task<List<WatchlistDTO>> GetWatchlist(string userToken)
         {
             int IdUser = int.Parse(SecurityHelper.GetUserIdFromAccToken(userToken, _configuration["SecretKey"], _configuration["Issuer"], _configuration["Audience"]));
             var watchlist = await _context.Watchlists.Where(x => x.IdUser == IdUser)
                 .Include(a => a.Company)
                 .Select(w => new WatchlistDTO
-                {   
+                {
                     IdCompany = w.IdCompany,
                     Logo = w.Company.Logo,
                     Symbol = w.Company.Symbol,
@@ -185,7 +196,7 @@ namespace Project.Services
         public async Task DeleteFromWatchlist(int idCompany)
         {
             //Console.WriteLine($"{idCompany}");
-            var item =  await _context.Watchlists.FirstAsync(x => x.IdCompany == idCompany);
+            var item = await _context.Watchlists.FirstAsync(x => x.IdCompany == idCompany);
             //Console.WriteLine($"{idCompany}");
             _context.Watchlists.Remove(item);
             //Console.WriteLine($"{idCompany}");

@@ -1,4 +1,5 @@
-﻿using Project.Models.UserAuth;
+﻿using Newtonsoft.Json;
+using Project.Models.UserAuth;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -15,5 +16,9 @@ namespace Project.Models
         [Required]
         [ForeignKey("IdCompany")]
         public Company Company { get; set; }
+        public override string ToString()
+        {
+            return JsonConvert.SerializeObject(this);
+        }
     }
 }

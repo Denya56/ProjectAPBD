@@ -48,6 +48,12 @@
                   IsPrimary="true" @onclick="@NavigateToWatchlistPage">Watchlist</SfButton>
 </div>
 
+@if (@ExceptionWatchlist != null)
+{
+    <div>
+        <label class="error-label">@ExceptionWatchlist</label>
+    </div>
+}
 
 @if (@ChartShown)
 {
@@ -99,6 +105,9 @@
         justify-content: center;
         padding: 20px 0px 0px;
     }
+    .error-label {
+        color: red;
+    }
 </style>
 
 @*<SfAutoComplete TValue="string" TItem="EmployeeData" Placeholder="Select a Employee" Query="@RemoteDataQuery">
@@ -124,6 +133,7 @@
     public string LocalStorageQueryValue { get; set; }
     private StockChartPeriod SelectedPeriod = new StockChartPeriod();
     private IntervalType XAxisInterval = new IntervalType();
+    private string? ExceptionWatchlist;
     private class Data
     {
         public string ticker;
@@ -153,7 +163,7 @@
         if (result.Success)
         {
             LocalStorageQueryValue = result.Value;
-            Console.WriteLine($"val: {LocalStorageQueryValue}");
+            //Console.WriteLine($"val: {LocalStorageQueryValue}");
         }
     }
     private async void PeriodChange(StockChartPeriodChangedEventArgs __e)
@@ -232,7 +242,7 @@
 
         //Console.WriteLine($"token: {LocalStorageQueryValue}");
         //Console.WriteLine($"{SelectedPeriod.IntervalType}");
-        
+
         DataSource = await Http.GetFromJsonAsync<List<StockChartData>>(
             $"http://localhost:5158/api/stocks/timeSpan?symbol={data.ticker.ToUpper()}&timeSpan={SelectedPeriod.IntervalType}&multiplier={SelectedPeriod.Interval}");
         //Console.WriteLine($"Count: {DataSource.Count}");
@@ -254,9 +264,26 @@
     {
         await GetValueAsync();
         string userToken = LocalStorageQueryValue;
-        Console.WriteLine($"ticker: {data.ticker}");
-        await _stockServices.AddToWatchlist(data.ticker, userToken);
-        Console.WriteLine("Added");
+        //Console.WriteLine($"ticker: {data.ticker}");
+        var e = await Http.PostAsync($"http://localhost:5158/api/stocks/watchlistAdd?symbol={data.ticker}&userToken={userToken}", null);
+
+        if(e.StatusCode.Equals(System.Net.HttpStatusCode.BadRequest))
+        {
+            ExceptionWatchlist = "Company is already in the watchlist";
+        }
+        else if(e.StatusCode.Equals(System.Net.HttpStatusCode.Unauthorized))
+        {
+            ExceptionWatchlist = "Please log in again";
+        }
+        else if(e.StatusCode.Equals(System.Net.HttpStatusCode.TooManyRequests))
+        {
+            ExceptionWatchlist = "Try again later";
+        }
+        //Console.WriteLine($"ex: {ExceptionWatchlist}");
+        //Console.WriteLine($"ex: {e.StatusCode.GetType()}");
+        StateHasChanged();
+        //await _stockServices.AddToWatchlist(data.ticker, userToken);
+        //Console.WriteLine("Added");
     }
     private void NavigateToWatchlistPage()
     {

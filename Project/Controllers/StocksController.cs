@@ -20,7 +20,7 @@ namespace Project.Controllers
         [HttpGet("company")]
         public async Task<IActionResult> GetCompany([FromQuery]string symbol)
         {
-            Console.WriteLine(symbol);
+            //Console.WriteLine(symbol);
             var s = await _stocksServices.GetCompanyAsync(symbol);
             return Ok(s);
         }
@@ -42,13 +42,28 @@ namespace Project.Controllers
         [HttpGet("watchlist")]
         public async Task<List<WatchlistDTO>> GetWatchlistAsync([FromQuery] string token)
         {
-            Console.WriteLine($"token controller: {token}");
+            //Console.WriteLine($"token controller: {token}");
             var s = await _stocksServices.GetWatchlist(token);
             /*foreach (var item in s)
             {
                 Console.WriteLine(item);
             }*/
             return s;
+        }
+        [HttpPost("watchlistAdd")]
+        public async Task AddToWatchlistAsync([FromQuery]string symbol, [FromQuery] string userToken)
+        {
+            //Console.WriteLine("lulz");
+            try
+            {
+                await _stocksServices.AddToWatchlist(symbol, userToken);
+            }
+            catch (BadHttpRequestException)
+            {
+
+                Response.StatusCode = StatusCodes.Status400BadRequest;
+            }
+            return;
         }
     }
 }
